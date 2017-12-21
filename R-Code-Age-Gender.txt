@@ -1,0 +1,95 @@
+# setting the working directory for this code
+setwd("C:/Study/Kaggle-KunalNaik/Age Gender Model")
+
+
+#importing data into R
+df_train<-read.csv("Train-Age-Gender.csv")
+df_test<-read.csv("Test-Age-Gender.csv")
+
+
+
+#Check Train dataset
+str(df_train)
+summary(df_train)
+
+#Check Test dataset
+str(df_test)
+summary(df_test)
+
+
+#Add variable Survived to the df_Test dataset and assigned a value of NA to it
+df_test$Survived<-NA
+View(df_test)
+
+#Need to convert the Survived variable in df_train to type 'factor' 
+df_train$Survived<-as.factor(df_train$Survived)
+#Just to check if the above command worked correctly or not
+str(df_train)
+#OR
+is.factor(df_train$Survived)
+
+
+#We will replace all the NA values under the Age variable in the df_Train df by mean
+#We first start by finding out the missing values if any
+table(is.na(df_train$Age))
+
+#Here we find the mean of available values of age to replace it with the NA or missing values
+round(mean(df_train$Age,na.rm=TRUE))
+
+#Here we replace the missing value(NA) by the mean found in the above statement
+df_train$Age[is.na(df_train$Age)]<-round(mean(df_train$Age,na.rm=TRUE))
+
+View(df_train)
+
+table(is.na(df_train$Age))
+
+#We will replace all the NA values under the Age variable in the df_test df by mean
+#We first start by finding out the missing values if any
+table (is.na(df_test$Age))
+
+#We will calculate the mean of all the remaining age values in the table
+round(mean(df_test$Age,trim=0,na.rm=TRUE))
+
+# Assigning the mean calculate above to the NA or missing values of the Age variable
+df_test$Age[is.na(df_test$Age)]<-round(mean(df_test$Age, trim = 0, na.rm = TRUE))
+
+#To check if all the NA or missing values were replaced by the above mean calculated
+table(is.na(df_test$Age))
+
+
+#Just rechecking if there are any missing values in both the train and test datasets
+
+summary(df_train)
+summary(df_test)
+
+
+#Data is now clean, build a model using logistic regression
+
+logistic<- glm(Survived ~ Age + Sex, data=df_train, family = binomial)
+summary(logistic)
+
+#Check using the training dataset
+predict<-predict(logistic,df_train,type='response')
+
+#Check Model performance
+library(ROCR)
+ROCRpred<-prediction(predict,df_train$Survived)
+ROCRperf<-performance(ROCRpred,'tpr','fpr')
+plot(ROCRperf,colorize=TRUE,text.adj = c(-0.2,1.7))
+
+#auc <- performace(ROCRpred , measure = "auc")
+
+#Score on the test dataset
+prediction <- predict(logistic, df_test, type = 'response')
+
+
+#Since the prediction range is 0 to 1 we need to ensure that the responses are either 0 or 1
+df_test$Survived <-ifelse(prediction>0.5,1,0)
+
+
+#Preparing dataset as per a Kaggle Submission file
+solution<-data.frame(PassengerID=df_test$PassengerId, Survived=df_test$Survived)
+
+#Export the values to the same folder as the input files
+write.csv(solution , "submission_train_gender_age.csv", row.names = F)
+
